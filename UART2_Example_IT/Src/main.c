@@ -10,6 +10,9 @@
 #include "main.h"
 #include <string.h>
 
+#define FALSE 	0
+#define TRUE 	1
+
 void SystemClockConfig(void);
 void UART2_Init(void);
 void Error_handler(void);
@@ -17,6 +20,10 @@ uint8_t convert_to_capital(uint8_t data);
 
 UART_HandleTypeDef huart2;
 char *user_data = "This application is running...\r\n";
+uint8_t rcvd_data = 0;
+uint8_t data_buffer[100];
+uint32_t count = 0;
+uint8_t reception_complete = FALSE;
 
 int main(void) {
 	HAL_Init();
@@ -27,9 +34,23 @@ int main(void) {
 		Error_handler();
 	}
 
+	while (reception_complete != TRUE) {
+		HAL_UART_Receive_IT(&huart2, &rcvd_data, 1);
+	}
+
 	while(1);
 
 	return 0;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (rcvd_data == '\r') {
+		reception_complete = TRUE;
+		data_buffer[count++] = '\r';
+		HAL_UART_Transmit(&huart2, data_buffer, count, HAL_MAX_DELAY);
+	} else {
+		data_buffer[count++] = rcvd_data;
+	}
 }
 
 void SystemClockConfig(void) {
